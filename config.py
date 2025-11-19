@@ -59,3 +59,16 @@ CAREERS_FUTURE_SEARCH_QUERIES = ["Data Analyst", "Data Scientist (Entry Level)",
 CAREERS_FUTURE_SEARCH_CATEGORIES = ["Information Technology"]
 CAREERS_FUTURE_SEARCH_EMPLOYMENT_TYPES = ["Full Time"]
 
+# --- Resume Pagination/Compression Feature Flags ---
+ENFORCE_TWO_PAGE_RESUME: bool = True
+RESUME_MAX_PAGES: int = 2
+RESUME_SECTION_QUOTAS = {
+    "summary_max_words": 110,
+    "skills_min": 8,
+    "skills_max": 14,
+    "experience_roles_max": 5,
+    "experience_bullets_max": 5,
+    "projects_max": 2,
+    "project_bullets_max": 3
+}
+
