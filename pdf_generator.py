@@ -1,9 +1,9 @@
 import io
 import logging
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 from models import Resume 
@@ -17,7 +17,7 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
     """
     buffer = io.BytesIO()
     
-    # Document setup with slightly wider margins for better readability
+    # Document setup with slightly wider margins
     doc = SimpleDocTemplate(
         buffer, 
         pagesize=letter,
@@ -30,15 +30,14 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
     # Create custom styles
     styles = getSampleStyleSheet()
     
-    # Define a modern color palette
-    primary_color = colors.HexColor('#1976D2')  # Modern blue
-    secondary_color = colors.HexColor('#455A64')  # Dark blue-gray
-    accent_color = colors.HexColor('#03A9F4')  # Light blue
-    text_color = colors.HexColor('#212121')  # Near black
-    light_text = colors.HexColor('#757575')  # Medium gray
-    background_color = colors.HexColor('#F5F5F5')  # Light gray background
+    # Modern color palette
+    primary_color = colors.HexColor('#1976D2')
+    secondary_color = colors.HexColor('#455A64')
+    accent_color = colors.HexColor('#03A9F4')
+    text_color = colors.HexColor('#212121')
+    light_text = colors.HexColor('#757575')
     
-    # Create custom styles using ReportLab's built-in fonts
+    # Custom styles
     style_name = ParagraphStyle(
         name='Name',
         parent=styles['Heading1'],
@@ -101,7 +100,7 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
         name='Dates',
         parent=styles['Normal'],
         fontSize=9,
-        alignment=TA_RIGHT,
+        alignment=TA_LEFT,
         fontName='Helvetica-Oblique',
         textColor=light_text,
     )
@@ -109,13 +108,13 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
     style_bullet = ParagraphStyle(
         name='Bullet',
         parent=styles['Normal'],
-        fontSize=10,
-        leading=14,
-        leftIndent=15,
+        fontSize=9,
+        leading=12,
+        leftIndent=10,
         bulletIndent=0,
         fontName='Helvetica',
         textColor=text_color,
-        spaceAfter=4,
+        spaceAfter=1,
     )
 
     style_tech = ParagraphStyle(
@@ -133,7 +132,6 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
     if resume_data.name:
         story.append(Paragraph(resume_data.name.upper(), style_name))
 
-    
     # --- Contact Information ---
     contact_info = []
     if resume_data.email: contact_info.append(resume_data.email)
@@ -154,7 +152,7 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
     # --- Summary ---
     if resume_data.summary:
         story.append(Paragraph("PROFESSIONAL SUMMARY", style_section_heading))
-        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#2C3E50'), spaceBefore=0, spaceAfter=8))
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#2C3E50'), spaceBefore=0, spaceAfter=6))
         
         # Remove leading/trailing double quotes from summary if they exist
         cleaned_summary = resume_data.summary
@@ -163,50 +161,15 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
             
         story.append(Paragraph(cleaned_summary, style_normal))
     
-    # --- Skills ---
+    # --- Skills (Grouped) ---
     if resume_data.skills:
         story.append(Paragraph("SKILLS", style_section_heading))
-        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#2C3E50'), spaceBefore=0, spaceAfter=8))
-        
-        skills_list = resume_data.skills
-        if skills_list: # Ensure there are skills to process
-            num_columns = 3  # We'll use a 3-column layout
-            
-            # Prepare data for the table
-            table_data = []
-            num_skills = len(skills_list)
-            # Calculate number of rows needed (ceiling division)
-            rows = (num_skills + num_columns - 1) // num_columns
-
-            for i in range(rows):
-                row_items = []
-                for j in range(num_columns):
-                    skill_index = i * num_columns + j # This fills row by row
-                    if skill_index < num_skills:
-                        skill_text = f"• {skills_list[skill_index]}" # Add a bullet point
-                        row_items.append(Paragraph(skill_text, style_normal))
-                    else:
-                        row_items.append(Paragraph("", style_normal)) # Empty cell for padding
-                table_data.append(row_items)
-
-            if table_data:
-                # Calculate available width for the table
-                page_width_available = letter[0] - doc.leftMargin - doc.rightMargin
-                col_width = page_width_available / num_columns
-                
-                # Define column widths for the table
-                colWidths = [col_width] * num_columns
-                
-                skills_table = Table(table_data, colWidths=colWidths)
-                skills_table.setStyle(TableStyle([
-                    ('VALIGN', (0,0), (-1,-1), 'TOP'),          # Align content to the top of cells
-                    ('LEFTPADDING', (0,0), (0,-1), 10),         # No left padding for cells
-                    ('RIGHTPADDING', (0,0), (-1,-1), 6),        # Padding between columns (applied to right of each cell)
-                    ('BOTTOMPADDING', (0,0), (-1,-1), 3),       # Padding below each row
-                    # ('GRID', (0,0), (-1,-1), 0.5, colors.red) # Uncomment for debugging table layout
-                ]))
-                story.append(skills_table)
-                story.append(Spacer(1, 0.1*inch)) # Add some space after the skills section
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#2C3E50'), spaceBefore=0, spaceAfter=6))
+        grouped = _group_skills(resume_data.skills)
+        for heading, items in grouped.items():
+            if items:
+                story.append(Paragraph(f"<b>{heading}:</b> {', '.join(items)}", style_normal))
+                story.append(Spacer(1, 0.04*inch))
     
     # --- Experience ---
     if resume_data.experience:
@@ -214,96 +177,39 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
         story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#2C3E50'), spaceBefore=0, spaceAfter=8))
         
         for exp in resume_data.experience:
-            # Create a table for job header to align job title and dates
-            job_title = f"{exp.job_title}"
+            job_title = f"{exp.job_title}" if exp.job_title else ""
+            if job_title:
+                story.append(Paragraph(job_title, style_job_title))
             if exp.company and exp.location:
-                company_location = f"{exp.company} | {exp.location}"
+                story.append(Paragraph(f"{exp.company} | {exp.location}", style_company))
             elif exp.company:
-                company_location = exp.company
-            else:
-                company_location = ""
-            
-            dates = ""
-            if exp.start_date and exp.end_date: 
-                dates = f"{exp.start_date} - {exp.end_date}"
-            elif exp.start_date: 
-                dates = f"{exp.start_date} - Present"
-            
-            # Create two-column layout for position details
-            data = [[Paragraph(job_title, style_job_title), Paragraph(dates, style_dates)]]
-            tbl = Table(data, colWidths=[4.636*inch, 2.5*inch])
-            tbl.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),  # Reduce padding for tighter layout
-                ('LEFTPADDING', (0, 0), (0, -1), 0),  # No left padding for the first column
-            ]))
-            story.append(tbl)
-            
-            story.append(Paragraph(company_location, style_company))
-            story.append(Spacer(1, 0.1*inch))
+                story.append(Paragraph(exp.company, style_company))
+            dates = _format_date_range(exp.start_date, exp.end_date)
+            if dates:
+                story.append(Paragraph(dates, style_dates))
+            story.append(Spacer(1, 0.06*inch))
             
             if exp.description:
-                # First check if the description is already in bullets format by looking for newlines
+                # Trust that description is already formatted with bullets from LLM
+                # Check if it contains newlines (pre-formatted bullets)
                 if '\n' in exp.description:
-                    # Handle existing bullet points for responsibilities/achievements
                     bullets = exp.description.split('\n')
                     for bullet in bullets:
-                        if bullet.strip():  # Skip empty lines
-                            # Handle bullet formatting - ensure proper bullet point
-                            bullet_text = bullet.strip()
-                            if not bullet_text.startswith('-') and not bullet_text.startswith('•'):
+                        bullet_text = bullet.strip()
+                        if bullet_text:
+                            # Ensure bullet point formatting
+                            if not bullet_text.startswith('•'):
                                 bullet_text = f"• {bullet_text}"
-                            elif bullet_text.startswith('-'):
-                                bullet_text = f"• {bullet_text[1:].strip()}"
-                            
                             story.append(Paragraph(bullet_text, style_bullet))
                 else:
-                    # Split a paragraph into sentences and make each sentence a bullet point
-                    # This handles periods followed by a space as sentence delimiters
-                    # Also handles common abbreviations like "e.g.", "i.e.", "etc."
-                    text = exp.description.strip()
-                    
-                    # Replace common abbreviations temporarily to avoid splitting at their periods
-                    text = text.replace("e.g.", "TEMP_EG")
-                    text = text.replace("i.e.", "TEMP_IE")
-                    text = text.replace("etc.", "TEMP_ETC")
-                    text = text.replace("vs.", "TEMP_VS")
-                    text = text.replace("Mr.", "TEMP_MR")
-                    text = text.replace("Mrs.", "TEMP_MRS")
-                    text = text.replace("Ms.", "TEMP_MS")
-                    text = text.replace("Dr.", "TEMP_DR")
-                    text = text.replace("St.", "TEMP_ST")
-                    text = text.replace("Ph.D.", "TEMP_PHD")
-                    text = text.replace("U.S.", "TEMP_US")
-                    text = text.replace("U.K.", "TEMP_UK")
-                    
-                    # Split by periods
-                    sentences = text.split('. ')
-                    
-                    # Process each sentence
-                    for i, sentence in enumerate(sentences):
-                        if sentence:
-                            # Restore abbreviations
-                            sentence = sentence.replace("TEMP_EG", "e.g.")
-                            sentence = sentence.replace("TEMP_IE", "i.e.")
-                            sentence = sentence.replace("TEMP_ETC", "etc.")
-                            sentence = sentence.replace("TEMP_VS", "vs.")
-                            sentence = sentence.replace("TEMP_MR", "Mr.")
-                            sentence = sentence.replace("TEMP_MRS", "Mrs.")
-                            sentence = sentence.replace("TEMP_MS", "Ms.")
-                            sentence = sentence.replace("TEMP_DR", "Dr.")
-                            sentence = sentence.replace("TEMP_ST", "St.")
-                            sentence = sentence.replace("TEMP_PHD", "Ph.D.")
-                            sentence = sentence.replace("TEMP_US", "U.S.")
-                            sentence = sentence.replace("TEMP_UK", "U.K.")
-                            
-                            # Add period back if it's not the last sentence or if the last sentence doesn't end with punctuation
-                            if i < len(sentences) - 1 or not sentence[-1] in ['.', '!', '?']:
-                                sentence = sentence + '.'
-                                
-                            story.append(Paragraph(f"• {sentence.strip()}", style_bullet))
+                    # Single paragraph - add as one bullet
+                    if exp.description.strip():
+                        bullet_text = exp.description.strip()
+                        if not bullet_text.startswith('•'):
+                            bullet_text = f"• {bullet_text}"
+                        story.append(Paragraph(bullet_text, style_bullet))
             
-            story.append(Spacer(1, 0.15*inch))
+            story.append(Spacer(1, 0.08*inch))
     
     # --- Education ---
     if resume_data.education:
@@ -325,17 +231,12 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
             elif edu.end_year: 
                 years = f"Graduated {edu.end_year}"
             
-            # Create two-column layout
-            data = [[Paragraph(degree_info, style_normal), Paragraph(years, style_dates)]]
-            tbl = Table(data, colWidths=[5.15*inch, 2*inch])
-            tbl.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (0, -1), 0),
-            ]))
-            story.append(tbl)
-            
+            if degree_info:
+                story.append(Paragraph(degree_info, style_normal))
+            if years:
+                story.append(Paragraph(years, style_dates))
             story.append(Paragraph(edu.institution, style_normal))
-            story.append(Spacer(1, 0.15*inch))
+            story.append(Spacer(1, 0.1*inch))
     
     # --- Projects ---
     if resume_data.projects:
@@ -346,88 +247,24 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
             story.append(Paragraph(f"<b>{proj.name}</b>", style_job_title))
             
             if proj.description:
-                # Check if the description is already in bullets format by looking for newlines
+                # Trust LLM formatting - check for newlines
                 if '\n' in proj.description:
                     bullets = proj.description.split('\n')
                     for bullet in bullets:
-                        if bullet.strip():
-                            bullet_text = bullet.strip()
-                            if not bullet_text.startswith('-') and not bullet_text.startswith('•'):
+                        bullet_text = bullet.strip()
+                        if bullet_text:
+                            if not bullet_text.startswith('•'):
                                 bullet_text = f"• {bullet_text}"
-                            elif bullet_text.startswith('-'):
-                                bullet_text = f"• {bullet_text[1:].strip()}"
                             story.append(Paragraph(bullet_text, style_bullet))
                 else:
-                    # Split a paragraph into sentences and make each sentence a bullet point
-                    text = proj.description.strip()
-                    
-                    # Replace common abbreviations temporarily to avoid splitting at their periods
-                    text = text.replace("e.g.", "TEMP_EG")
-                    text = text.replace("i.e.", "TEMP_IE")
-                    text = text.replace("etc.", "TEMP_ETC")
-                    text = text.replace("vs.", "TEMP_VS")
-                    text = text.replace("Mr.", "TEMP_MR")
-                    text = text.replace("Mrs.", "TEMP_MRS")
-                    text = text.replace("Ms.", "TEMP_MS")
-                    text = text.replace("Dr.", "TEMP_DR")
-                    text = text.replace("St.", "TEMP_ST")
-                    text = text.replace("Ph.D.", "TEMP_PHD")
-                    text = text.replace("U.S.", "TEMP_US")
-                    text = text.replace("U.K.", "TEMP_UK")
-                    
-                    # Split by periods followed by a space, or just periods if it's the end of the string
-                    sentences = []
-                    current_sentence = ""
-                    for char in text:
-                        current_sentence += char
-                        if char == '.':
-                            # Check if the next char is a space or end of string
-                            # This is a simplified approach; more robust sentence tokenization might be needed for complex cases
-                            if text.index(current_sentence) + len(current_sentence) == len(text) or \
-                               (text.index(current_sentence) + len(current_sentence) < len(text) and \
-                                text[text.index(current_sentence) + len(current_sentence)] == ' '):
-                                sentences.append(current_sentence.strip())
-                                current_sentence = ""
-                    if current_sentence.strip(): # Add any remaining part
-                        sentences.append(current_sentence.strip())
-
-                    # If splitting by ". " resulted in no sentences (e.g. single sentence without trailing space after period)
-                    # or if the original text didn't contain ". "
-                    if not sentences or (len(sentences) == 1 and sentences[0] == text):
-                        # Fallback to splitting by just "." if ". " fails or if it's a single block
-                        sentences = [s.strip() for s in text.split('.') if s.strip()]
-                        # Add back periods if they were removed, except for the last sentence if it was already punctuated
-                        for i in range(len(sentences)):
-                            if i < len(sentences) -1: # Add period to all but the last
-                                sentences[i] = sentences[i] + "."
-                            elif not sentences[i].endswith(('.', '!', '?')): # Add to last if no punctuation
-                                 sentences[i] = sentences[i] + "."
-
-
-                    for i, sentence in enumerate(sentences):
-                        if sentence:
-                            # Restore abbreviations
-                            sentence = sentence.replace("TEMP_EG", "e.g.")
-                            sentence = sentence.replace("TEMP_IE", "i.e.")
-                            sentence = sentence.replace("TEMP_ETC", "etc.")
-                            sentence = sentence.replace("TEMP_VS", "vs.")
-                            sentence = sentence.replace("TEMP_MR", "Mr.")
-                            sentence = sentence.replace("TEMP_MRS", "Mrs.")
-                            sentence = sentence.replace("TEMP_MS", "Ms.")
-                            sentence = sentence.replace("TEMP_DR", "Dr.")
-                            sentence = sentence.replace("TEMP_ST", "St.")
-                            sentence = sentence.replace("TEMP_PHD", "Ph.D.")
-                            sentence = sentence.replace("TEMP_US", "U.S.")
-                            sentence = sentence.replace("TEMP_UK", "U.K.")
-                            
-                            # Ensure sentence ends with a period if it was split by ". " and it's not the last part
-                            # or if it doesn't have terminal punctuation
-                            if not sentence.endswith(('.', '!', '?')):
-                                sentence += '.'
-                                
-                            story.append(Paragraph(f"• {sentence.strip()}", style_bullet))
+                    # Single paragraph
+                    if proj.description.strip():
+                        bullet_text = proj.description.strip()
+                        if not bullet_text.startswith('•'):
+                            bullet_text = f"• {bullet_text}"
+                        story.append(Paragraph(bullet_text, style_bullet))
             
-            if proj.technologies:
+            if proj.technologies and len(proj.technologies) > 0:
                 tech_text = f"<i>Technologies:</i> {', '.join(proj.technologies)}"
                 story.append(Paragraph(tech_text, style_tech))
             
@@ -439,25 +276,13 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
         story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#2C3E50'), spaceBefore=0, spaceAfter=8))
         
         for cert in resume_data.certifications:
-            cert_info = f"<b>{cert.name}</b>"
-            
-            # Right aligned year if available
-            year_text = ""
-            if cert.year:
-                year_text = cert.year
-            
-            # Create a table for certification info
-            data = [[Paragraph(cert_info, style_normal), Paragraph(year_text, style_dates)]]
-            tbl = Table(data, colWidths=[5.3*inch, 2*inch])
-            tbl.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ]))
-            story.append(tbl)
-            
+            if cert.name:
+                story.append(Paragraph(f"<b>{cert.name}</b>", style_normal))
             if cert.issuer:
                 story.append(Paragraph(cert.issuer, style_normal))
-            
-            story.append(Spacer(1, 0.1*inch))
+            if cert.year:
+                story.append(Paragraph(_format_month_year(cert.year), style_dates))
+            story.append(Spacer(1, 0.08*inch))
     
     # --- Languages ---
     if resume_data.languages:
@@ -470,8 +295,92 @@ def create_resume_pdf(resume_data: Resume) -> bytes:
         logging.info("PDF generated successfully.")
     except Exception as e:
         logging.error(f"Error building PDF: {e}")
-        raise  # Re-raise the exception
+        raise
     
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
+
+def _format_month_year(text: str) -> str:
+    if not text:
+        return ""
+    patterns = ["%b %Y", "%B %Y", "%Y-%m", "%Y"]
+    from datetime import datetime
+    for fmt in patterns:
+        try:
+            if fmt == "%Y":
+                dt = datetime(int(text), 1, 1)
+            else:
+                dt = datetime.strptime(text, fmt)
+            return dt.strftime("%b %Y")
+        except Exception:
+            pass
+    return text
+
+def _format_date_range(start: str, end: str) -> str:
+    s = _format_month_year(start) if start else ""
+    e = _format_month_year(end) if end else ""
+    if s and e:
+        return f"{s} – {e}"
+    if s and not e:
+        return f"{s} – Present"
+    return ""
+
+def _group_skills(skills: list) -> dict:
+    """
+    Group skills into meaningful categories for better readability.
+    """
+    cat = {
+        "Programming & Data Tools": [],
+        "Data Analysis & Statistics": [],
+        "Visualization & BI": [],
+        "Databases": [],
+        "Machine Learning": [],
+        "Domain Skills": [],
+        "Tools & Technologies": [],
+    }
+    
+    for s in skills:
+        sl = s.lower()
+        # Programming & Data Tools
+        if any(k in sl for k in ["python", "pandas", "numpy", "scikit", "sklearn", "r ", "julia", "scala"]):
+            cat["Programming & Data Tools"].append(s)
+        # Visualization & BI
+        elif any(k in sl for k in ["power bi", "tableau", "visualization", "dashboard", "looker", "qlik", "plotly", "matplotlib", "seaborn"]):
+            cat["Visualization & BI"].append(s)
+        # Databases
+        elif any(k in sl for k in ["sql", "mysql", "postgresql", "database", "erd", "schema", "mongodb", "nosql", "oracle", "sqlite"]):
+            cat["Databases"].append(s)
+        # Machine Learning
+        elif any(k in sl for k in ["classification", "regression", "random forest", "xgboost", "svm", "model", "ml", "machine learning", "deep learning", "neural", "tensorflow", "pytorch", "keras"]):
+            cat["Machine Learning"].append(s)
+        # Data Analysis & Statistics
+        elif any(k in sl for k in ["data cleaning", "statistical", "statistics", "hypothesis", "a/b test", "kpi", "analysis", "analytics", "trend", "reporting", "data quality", "etl", "data pipeline"]):
+            cat["Data Analysis & Statistics"].append(s)
+        # Domain Skills
+        elif any(k in sl for k in ["quality", "process", "optimization", "root cause", "spc", "manufacturing", "reliability", "testing"]):
+            cat["Domain Skills"].append(s)
+        # Tools & Technologies
+        elif any(k in sl for k in ["excel", "git", "github", "jupyter", "notebook", "aws", "azure", "gcp", "docker", "kubernetes", "airflow"]):
+            cat["Tools & Technologies"].append(s)
+        # Default - put in first appropriate category
+        else:
+            cat["Tools & Technologies"].append(s)
+    
+    # Return only non-empty categories in logical order
+    ordered_result = {}
+    order = [
+        "Programming & Data Tools",
+        "Data Analysis & Statistics",
+        "Machine Learning",
+        "Visualization & BI",
+        "Databases",
+        "Tools & Technologies",
+        "Domain Skills"
+    ]
+    
+    for key in order:
+        if cat[key]:
+            ordered_result[key] = cat[key]
+    
+    return ordered_result
