@@ -10,6 +10,7 @@ import re
 import asyncio 
 genai = None
 types = None
+from gemini_client import generate_content_resilient
 from models import (
     Education, Experience, Project, Certification, Links, Resume,
     SummaryOutput, SkillsOutput, ExperienceListOutput, SingleExperienceOutput,
@@ -333,7 +334,7 @@ async def personalize_section_with_llm(
         from google.genai import types as _types
         genai, types = _genai, _types
     if client is None:
-        client = genai.Client(api_key=config.GEMINI_SECOND_API_KEY)
+        client = None
 
     responses = []
     for prompt in prompts:
@@ -343,15 +344,13 @@ async def personalize_section_with_llm(
         while attempts < 2:
             attempts += 1
             try:
-                response = client.models.generate_content(
+                response = generate_content_resilient(
+                    prompt,
                     model=config.GEMINI_MODEL_NAME,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.2,
-                        system_instruction=system_prompt,
-                        response_mime_type='application/json',
-                        response_schema=OutputModel,
-                    )
+                    temperature=0.2,
+                    system_instruction=system_prompt,
+                    response_mime_type='application/json',
+                    response_schema=OutputModel,
                 )
                 llm_output = response.text.strip()
                 logging.info(f"Received response from Gemini for section: {section_name}")
@@ -473,23 +472,21 @@ async def validate_customization(
         from google.genai import types as _types
         genai, types = _genai, _types
     if client is None:
-        client = genai.Client(api_key=config.GEMINI_SECOND_API_KEY)
+        client = None
 
     try:
         attempts = 0
         parsed_validation_response_model = None
         while attempts < 2 and parsed_validation_response_model is None:
             attempts += 1
-            response = client.models.generate_content(
-                    model=config.GEMINI_MODEL_NAME,
-                    contents=user_prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.0,
-                        system_instruction=system_prompt,
-                        response_mime_type='application/json',
-                        response_schema=ValidationResponse,
-                    )
-                )
+            response = generate_content_resilient(
+                user_prompt,
+                model=config.GEMINI_MODEL_NAME,
+                temperature=0.0,
+                system_instruction=system_prompt,
+                response_mime_type='application/json',
+                response_schema=ValidationResponse,
+            )
             llm_output = response.text.strip()
             try:
                 parsed_validation_response_model = ValidationResponse.model_validate_json(llm_output)

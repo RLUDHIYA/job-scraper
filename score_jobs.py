@@ -1,4 +1,3 @@
-from google import genai
 import time
 import json
 import logging
@@ -9,12 +8,12 @@ import pdfplumber
 
 import config
 import supabase_utils
+from gemini_client import generate_content_resilient
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Initialize Gemini Client ---
-client = genai.Client(api_key=config.GEMINI_FIRST_API_KEY)
+# --- Gemini wrapper is used for all calls ---
 
 # --- Helper Functions ---
 
@@ -141,10 +140,11 @@ def get_resume_score_from_ai(resume_text: str, job_details: Dict[str, Any]) -> O
 
     try:
         logging.info(f"Requesting score for job_id: {job_details.get('job_id')}")
-        response = client.models.generate_content(
-            model=config.GEMINI_MODEL_NAME, 
-            contents=prompt
-            )
+        response = generate_content_resilient(
+            prompt,
+            model=config.GEMINI_MODEL_NAME,
+            temperature=0.0,
+        )
 
         # Attempt to parse the score
         score_text = response.text.strip()

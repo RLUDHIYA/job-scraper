@@ -5,13 +5,14 @@ This module takes extracted resume text and uses AI to parse it into structured 
 
 import json
 import os
-from google import genai
 from google.genai import types
 from typing import List, Optional
 import models
+import config
+from gemini_client import generate_content_resilient
 
 
-def parse_resume_with_ai(client: genai.Client, resume_text):
+def parse_resume_with_ai(resume_text):
     """
     Send resume text to an AI model and get structured information back.
     
@@ -29,12 +30,11 @@ def parse_resume_with_ai(client: genai.Client, resume_text):
     {resume_text}
     """
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash", 
-        contents=prompt, 
-        config=types.GenerateContentConfig(
-            response_mime_type='application/json',
-            response_schema=models.Resume,
-        )
+    response = generate_content_resilient(
+        prompt,
+        model=config.GEMINI_MODEL_NAME,
+        response_mime_type='application/json',
+        response_schema=models.Resume,
+        temperature=0.0,
     )
     return response.text

@@ -1,11 +1,9 @@
 import pdfplumber
-from google import genai
 import config
 from parse_resume_with_ai import parse_resume_with_ai
 import json
 from supabase_utils import save_resume_to_supabase 
 
-client = genai.Client(api_key=config.GEMINI_FIRST_API_KEY)
 
 def extract_text_from_pdf(pdf_path):
     """
@@ -35,7 +33,7 @@ def main(pdf_file_path):
         return
 
     # 2. Parse resume text with AI
-    parsed_resume_details_str = parse_resume_with_ai(client, resume_text)
+    parsed_resume_details_str = parse_resume_with_ai(resume_text)
     if not parsed_resume_details_str:
         print("Failed to parse resume. Exiting.")
         return

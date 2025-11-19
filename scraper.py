@@ -8,15 +8,14 @@ import config
 import user_agents
 import supabase_utils
 import html2text
-from google import genai
 from google.genai import types
 import json
+from gemini_client import generate_content_resilient
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Initialize Gemini Client ---
-client = genai.Client(api_key=config.GEMINI_FIRST_API_KEY)
+# --- Gemini wrapper is used for Markdown conversion ---
 
 # Convert description to Markdown
 def convert_plain_text_to_markdown_with_ai(text: str) -> str | None:
@@ -53,13 +52,11 @@ def convert_plain_text_to_markdown_with_ai(text: str) -> str | None:
     """
 
     try: 
-        response = client.models.generate_content(
+        response = generate_content_resilient(
+            prompt,
             model=config.GEMINI_SECONDARY_MODEL_NAME,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.2,
-            )
+            system_instruction=system_prompt,
+            temperature=0.2,
         )
         markdown_content = response.text.strip()
         
