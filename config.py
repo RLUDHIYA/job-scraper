@@ -16,6 +16,8 @@ SUPABASE_STORAGE_BUCKET="resumes"
 # --- Google Configuration ---
 GEMINI_FIRST_API_KEY = os.environ.get("GEMINI_FIRST_API_KEY")
 GEMINI_SECOND_API_KEY = os.environ.get("GEMINI_SECOND_API_KEY")
+GEMINI_THIRD_API_KEY = os.environ.get("GEMINI_THIRD_API_KEY")
+GEMINI_FOURTH_API_KEY = os.environ.get("GEMINI_FOURTH_API_KEY")
 # GEMINI_MODEL_NAME = "gemini-2.0-flash"
 GEMINI_MODEL_NAME = "gemini-2.5-flash"
 # GEMINI_SECONDARY_MODEL_NAME = "gemini-2.0-flash-lite"
